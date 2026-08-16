@@ -245,7 +245,11 @@ void var_init() {
 
 }
 
-/* Refresh load-dependent settings at most once per second. */
+/*
+ * Refresh load-dependent settings at most once per second.  The render loop
+ * runs much faster than that, so sampling on every frame would needlessly
+ * reopen /proc/loadavg and make the adaptation itself more expensive.
+ */
 void update_system_load(int *update, int *mcolor, int adaptive_speed,
                         int adaptive_color, int rainbow) {
 #ifndef _WIN32
@@ -259,11 +263,13 @@ void update_system_load(int *update, int *mcolor, int adaptive_speed,
 
     if (now != last_sample) {
         last_sample = now;
+        /* A failed read must disable adaptation for this sample interval. */
         load_available = 0;
         loadavg = fopen("/proc/loadavg", "r");
         cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
         if (loadavg != NULL && cpu_count > 0 &&
             fscanf(loadavg, "%lf", &load) == 1 && load >= 0.0) {
+            /* Normalize so 1.0 means roughly one runnable task per CPU. */
             normalized_load = load / (double) cpu_count;
             load_available = 1;
         }
@@ -277,6 +283,7 @@ void update_system_load(int *update, int *mcolor, int adaptive_speed,
     }
 
     if (adaptive_speed) {
+        /* napms() uses update in 10 ms units; cap the slowdown at 30 ms. */
         int load_update = 1 + (int) (normalized_load * 2.0);
         if (load_update > 3) {
             load_update = 3;
@@ -284,6 +291,7 @@ void update_system_load(int *update, int *mcolor, int adaptive_speed,
         *update = load_update;
     }
     if (adaptive_color && !rainbow) {
+        /* These thresholds give a simple green/yellow/red load indicator. */
         if (normalized_load >= 0.75) {
             *mcolor = COLOR_RED;
         } else if (normalized_load >= 0.35) {
