@@ -3,7 +3,7 @@
 CMatrix
 .SH SYNOPSIS
 .B cmatrix
-[\-abBflohnsmVx] [\-u update] [\-C color]
+[\-abBflohnsmVxASG] [\-u update] [\-C color]
 .SH DESCRIPTION
 Shows a scrolling 'Matrix' like screen in Linux
 .SS OPTIONS
@@ -62,6 +62,15 @@ Screen update delay 0 - 9, default 4
 .I "\-C color"
 Use this color for matrix (default green).
 Valid colors are green, red, blue, white, yellow, cyan, magenta and black.
+.TP
+.I "\-A"
+Adapt speed and color to normalized system load.
+.TP
+.I "\-S"
+Adapt speed to normalized system load.
+.TP
+.I "\-G"
+Adapt color to normalized system load, changing from green to yellow to red.
 .TP
 .I "\-M message"
 Add a message in the center of cmatrix
