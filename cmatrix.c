@@ -286,8 +286,8 @@ void update_system_load(int *update, int *mcolor, int adaptive_speed,
         if (load_band > 4) {
             load_band = 4;
         }
-        /* napms() uses update in 10 ms units: 60 ms through 140 ms. */
-        *update = 6 + 2 * load_band;
+        /* napms() uses update in 10 ms units: 100 ms through 300 ms. */
+        *update = 10 + 5 * load_band;
     }
     if (adaptive_color && !rainbow) {
         /* Progress from cool green through warm colors to red. */
