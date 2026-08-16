@@ -284,17 +284,17 @@ void update_system_load(int *update, int *mcolor, int adaptive_speed,
 
     if (adaptive_speed) {
         /* napms() uses update in 10 ms units; cap the slowdown at 30 ms. */
-        int load_update = 1 + (int) (normalized_load * 2.0);
+        int load_update = 1 + (int) normalized_load;
         if (load_update > 3) {
             load_update = 3;
         }
         *update = load_update;
     }
     if (adaptive_color && !rainbow) {
-        /* These thresholds give a simple green/yellow/red load indicator. */
-        if (normalized_load >= 0.75) {
+        /* Use one and two runnable tasks per CPU as the color boundaries. */
+        if (normalized_load >= 2.0) {
             *mcolor = COLOR_RED;
-        } else if (normalized_load >= 0.35) {
+        } else if (normalized_load >= 1.0) {
             *mcolor = COLOR_YELLOW;
         } else {
             *mcolor = COLOR_GREEN;
