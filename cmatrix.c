@@ -283,10 +283,10 @@ void update_system_load(int *update, int *mcolor, int adaptive_speed,
     }
 
     if (adaptive_speed) {
-        /* napms() uses update in 10 ms units; cap the slowdown at 30 ms. */
-        int load_update = 1 + (int) normalized_load;
-        if (load_update > 3) {
-            load_update = 3;
+        /* Keep low-load speed at the default, then add 20 ms per band. */
+        int load_update = 4 + 2 * (int) normalized_load;
+        if (load_update > 8) {
+            load_update = 8;
         }
         *update = load_update;
     }
