@@ -113,7 +113,9 @@ System-load adaptation is opt-in. Use `-S` to slow the columns as system load
 rises, `-G` to change the color from green to yellow to red as load rises, or
 `-A` to enable both. Load is normalized by the number of online CPUs and is
 sampled about once per second. Rainbow mode still takes precedence over
-load-based color selection.
+load-based color selection. The normalized load is divided into five bands at
+2, 4, 6, and 8: green/cyan/yellow/magenta/red. Adaptive update delays range
+from 60 ms in the lowest band to 140 ms in the highest.
 
 For more options and **help** run `cmatrix -h` <br>OR<br> Read Manual Page by running command `man cmatrix`
 
