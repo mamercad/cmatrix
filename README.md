@@ -102,12 +102,21 @@ cmatrix
 ```
 Run with different arguments to get different effects.
 ```sh
-cmatrix [-abBflohnsmVx] [-u update] [-C color]
+cmatrix [-abBflohnsmVxASG] [-u update] [-C color]
 ```
 Example:
 ```sh
 cmatrix -ba -u 2 -C red
 ```
+
+System-load adaptation is opt-in. Use `-S` to slow the columns as system load
+rises, `-G` to change the color from green to yellow to red as load rises, or
+`-A` to enable both. The raw one-minute load average from `/proc/loadavg` is
+sampled about once per second, matching the value shown by `uptime`. Rainbow
+mode still takes precedence over load-based color selection. The load is
+divided into five bands at 2, 4, 6, and 8: green/cyan/yellow/magenta/red.
+Adaptive update delays range from 100 ms in the lowest band to 300 ms in the
+highest.
 
 For more options and **help** run `cmatrix -h` <br>OR<br> Read Manual Page by running command `man cmatrix`
 

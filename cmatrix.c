@@ -147,7 +147,7 @@ void c_die(char *msg, ...) {
 }
 
 void usage(void) {
-    printf(" Usage: cmatrix -[abBcfhlsmVxk] [-u delay] [-C color] [-t tty] [-M message]\n");
+    printf(" Usage: cmatrix -[abBcfhlsmVxkASG] [-u delay] [-C color] [-t tty] [-M message]\n");
     printf(" -a: Asynchronous scroll\n");
     printf(" -b: Bold characters on\n");
     printf(" -B: All bold characters (overrides -b)\n");
@@ -167,6 +167,9 @@ void usage(void) {
     printf(" -r: rainbow mode\n");
     printf(" -m: lambda mode\n");
     printf(" -k: Characters change while scrolling. (Works without -o opt.)\n");
+    printf(" -A: Adapt speed and color to system load\n");
+    printf(" -S: Adapt speed to system load\n");
+    printf(" -G: Adapt color to system load\n");
     printf(" -t [tty]: Set tty to use\n");
 }
 
@@ -240,6 +243,79 @@ void var_init() {
         updates[j] = (int) rand() % 3 + 1;
     }
 
+}
+
+/*
+ * Refresh load-dependent settings at most once per second.  The render loop
+ * runs much faster than that, so sampling on every frame would needlessly
+ * reopen /proc/loadavg and make the adaptation itself more expensive.
+ */
+void update_system_load(int *update, int *mcolor, int adaptive_speed,
+                        int adaptive_color, int rainbow) {
+#ifndef _WIN32
+    static time_t last_sample = 0;
+    static double load_level = 0.0;
+    static int load_available = 0;
+    time_t now = time(NULL);
+    FILE *loadavg;
+    double load;
+
+    if (now != last_sample) {
+        last_sample = now;
+        /* A failed read must disable adaptation for this sample interval. */
+        load_available = 0;
+        loadavg = fopen("/proc/loadavg", "r");
+        if (loadavg != NULL && fscanf(loadavg, "%lf", &load) == 1 &&
+            load >= 0.0) {
+            /* Use the raw value shown by uptime so thresholds are intuitive. */
+            load_level = load;
+            load_available = 1;
+        }
+        if (loadavg != NULL) {
+            fclose(loadavg);
+        }
+    }
+
+    if (!load_available) {
+        return;
+    }
+
+    if (adaptive_speed) {
+        /* Five bands: <2, <4, <6, <8, and 8+ on the uptime scale. */
+        int load_band = (int) (load_level / 2.0);
+        if (load_band > 4) {
+            load_band = 4;
+        }
+        /* napms() uses update in 10 ms units: 100 ms through 300 ms. */
+        *update = 10 + 5 * load_band;
+    }
+    if (adaptive_color && !rainbow) {
+        /* Progress from cool green through warm colors to red. */
+        switch ((int) (load_level / 2.0)) {
+        case 0:
+            *mcolor = COLOR_GREEN;
+            break;
+        case 1:
+            *mcolor = COLOR_CYAN;
+            break;
+        case 2:
+            *mcolor = COLOR_YELLOW;
+            break;
+        case 3:
+            *mcolor = COLOR_MAGENTA;
+            break;
+        default:
+            *mcolor = COLOR_RED;
+            break;
+        }
+    }
+#else
+    (void) update;
+    (void) mcolor;
+    (void) adaptive_speed;
+    (void) adaptive_color;
+    (void) rainbow;
+#endif
 }
 
 #ifndef _WIN32
@@ -331,6 +407,8 @@ int main(int argc, char *argv[]) {
     int pause = 0;
     int classic = 0;
     int changes = 0;
+    int adaptive_speed = 0;
+    int adaptive_color = 0;
     char *msg = "";
     char *tty = NULL;
 
@@ -339,7 +417,7 @@ int main(int argc, char *argv[]) {
 
     /* Many thanks to morph- (morph@jmss.com) for this getopt patch */
     opterr = 0;
-    while ((optchr = getopt(argc, argv, "abBcfhlLnrosmxkVM:u:C:t:")) != EOF) {
+    while ((optchr = getopt(argc, argv, "abBcfhlLnrosmxkVM:u:C:t:ASG")) != EOF) {
         switch (optchr) {
         case 's':
             screensaver = 1;
@@ -427,6 +505,16 @@ int main(int argc, char *argv[]) {
             break;
         case 't':
             tty = optarg;
+            break;
+        case 'A':
+            adaptive_speed = 1;
+            adaptive_color = 1;
+            break;
+        case 'S':
+            adaptive_speed = 1;
+            break;
+        case 'G':
+            adaptive_color = 1;
             break;
         }
     }
@@ -657,6 +745,8 @@ if (console) {
                 }
             }
         }
+        update_system_load(&update, &mcolor, adaptive_speed, adaptive_color,
+                           rainbow);
         for (j = 0; j <= COLS - 1; j += 2) {
             if ((count > updates[j] || asynch == 0) && pause == 0) {
 
