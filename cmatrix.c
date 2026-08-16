@@ -254,11 +254,10 @@ void update_system_load(int *update, int *mcolor, int adaptive_speed,
                         int adaptive_color, int rainbow) {
 #ifndef _WIN32
     static time_t last_sample = 0;
-    static double normalized_load = 0.0;
+    static double load_level = 0.0;
     static int load_available = 0;
     time_t now = time(NULL);
     FILE *loadavg;
-    long cpu_count;
     double load;
 
     if (now != last_sample) {
@@ -266,11 +265,10 @@ void update_system_load(int *update, int *mcolor, int adaptive_speed,
         /* A failed read must disable adaptation for this sample interval. */
         load_available = 0;
         loadavg = fopen("/proc/loadavg", "r");
-        cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
-        if (loadavg != NULL && cpu_count > 0 &&
-            fscanf(loadavg, "%lf", &load) == 1 && load >= 0.0) {
-            /* Normalize so 1.0 means roughly one runnable task per CPU. */
-            normalized_load = load / (double) cpu_count;
+        if (loadavg != NULL && fscanf(loadavg, "%lf", &load) == 1 &&
+            load >= 0.0) {
+            /* Use the raw value shown by uptime so thresholds are intuitive. */
+            load_level = load;
             load_available = 1;
         }
         if (loadavg != NULL) {
@@ -283,8 +281,8 @@ void update_system_load(int *update, int *mcolor, int adaptive_speed,
     }
 
     if (adaptive_speed) {
-        /* Five bands: <2, <4, <6, <8, and 8+ runnable tasks per CPU. */
-        int load_band = (int) (normalized_load / 2.0);
+        /* Five bands: <2, <4, <6, <8, and 8+ on the uptime scale. */
+        int load_band = (int) (load_level / 2.0);
         if (load_band > 4) {
             load_band = 4;
         }
@@ -293,7 +291,7 @@ void update_system_load(int *update, int *mcolor, int adaptive_speed,
     }
     if (adaptive_color && !rainbow) {
         /* Progress from cool green through warm colors to red. */
-        switch ((int) (normalized_load / 2.0)) {
+        switch ((int) (load_level / 2.0)) {
         case 0:
             *mcolor = COLOR_GREEN;
             break;
